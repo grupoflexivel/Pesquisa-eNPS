@@ -1,0 +1,84 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}eNPS{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'pesquisas/img/Grupo Flexível_icon_color_X.png' %}">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        :root { --sidebar-width: 270px; --sidebar-collapsed: 78px; --brand: #004b46; }
+        body { background: #f5f6fa; color: #202334; }
+        .app-shell { min-height: 100vh; display: flex; }
+        .sidebar { width: var(--sidebar-width); background: #004b46; color: white; transition: width .2s ease; flex-shrink: 0; }
+        .sidebar.collapsed { width: var(--sidebar-collapsed); }
+        .sidebar .label, .sidebar .brand-label, .sidebar .user-info { transition: opacity .15s; white-space: nowrap; }
+        .sidebar.collapsed .label, .sidebar.collapsed .brand-label, .sidebar.collapsed .user-info, .sidebar.collapsed .sidebar-logo-full { display: none !important; }
+        .sidebar .nav-link { color: #c7c5dc; border-radius: .65rem; padding: .7rem .85rem; display: flex; gap: .8rem; align-items: center; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,.11); }
+        .sidebar .nav-link i { font-size: 1.15rem; min-width: 1.3rem; text-align: center; }
+        
+        .main-content { flex: 1; min-width: 0; }
+        .card { border: 0; border-radius: 1rem; box-shadow: 0 .25rem 1.25rem rgba(25, 24, 52, .06); }
+        
+        /* Cores personalizadas para os botões principais (.btn-primary) */
+        .btn-primary { 
+            background: #004b46; 
+            border-color: #004b46; 
+        }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active { 
+            background: #00665f !important; /* Um verde um pouco mais claro e elegante ao passar o mouse */
+            border-color: #005953 !important; 
+        }
+
+        .metric { font-size: 2rem; font-weight: 700; }
+        .external-wrap { min-height: 100vh; display: grid; place-items: center; padding: 1.25rem; background: linear-gradient(135deg, #f4f1ff, #eef7ff); }
+        .external-card { width: min(680px, 100%); }
+        @media (max-width: 767.98px) {
+            .sidebar { position: fixed; z-index: 1040; height: 100vh; transform: translateX(-100%); width: var(--sidebar-width) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar .label, .sidebar .brand-label, .sidebar .user-info, .sidebar .sidebar-logo-full { display: initial !important; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated and user.is_staff and not hide_sidebar %}
+    <div class="app-shell">
+        {% include 'includes/sidebar.html' %}
+        <main class="main-content p-3 p-md-4">
+            <button class="btn btn-light d-md-none mb-3" id="mobileSidebarToggle" type="button" aria-label="Abrir menu">
+                <i class="bi bi-list"></i>
+            </button>
+            {% include 'includes/messages.html' %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+{% else %}
+    <main class="external-wrap">
+        <div class="external-card">
+            {% include 'includes/messages.html' %}
+            {% block external_content %}{% block public_content %}{% endblock %}{% endblock %}
+        </div>
+    </main>
+{% endif %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const sidebar = document.getElementById('sidebar');
+    const desktopToggle = document.getElementById('sidebarToggle');
+    const mobileToggle = document.getElementById('mobileSidebarToggle');
+    if (sidebar && localStorage.getItem('enps-sidebar') === 'collapsed') sidebar.classList.add('collapsed');
+    desktopToggle?.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        localStorage.setItem('enps-sidebar', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+    });
+    mobileToggle?.addEventListener('click', () => sidebar.classList.toggle('mobile-open'));
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

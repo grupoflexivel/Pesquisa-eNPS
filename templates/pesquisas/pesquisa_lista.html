@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Pesquisas · eNPS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">Gerenciar pesquisas</h1>
+    <a class="btn btn-primary" href="{% url 'pesquisas:pesquisa_criar' %}">
+        <i class="bi bi-plus-lg"></i> Nova pesquisa
+    </a>
+</div>
+
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Link único</th>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Status</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pesquisa in pesquisas %}
+                <tr>
+                    <td class="fw-semibold">{{ pesquisa.titulo }}</td>
+                    <td>
+                        <div class="input-group input-group-sm" style="min-width: 280px;">
+                            <input class="form-control" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'pesquisas:responder' pesquisa.link_uuid %}" id="link-{{ pesquisa.pk }}">
+                            <button class="btn btn-outline-secondary copy-link" data-target="link-{{ pesquisa.pk }}" title="Copiar">
+                                <i class="bi bi-copy"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td>{{ pesquisa.data_inicio|date:'d/m/Y H:i' }}</td>
+                    <td>{{ pesquisa.data_final|date:'d/m/Y H:i' }}</td>
+                    <td>
+                        <span class="badge {% if pesquisa.status_exibicao == 'Em andamento' %}text-bg-success{% elif pesquisa.status_exibicao == 'Agendada' %}text-bg-info{% else %}text-bg-secondary{% endif %}">
+                            {{ pesquisa.status_exibicao }}
+                        </span>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <!-- Botão Resultados -->
+                        <a class="btn btn-sm btn-primary" href="{% url 'pesquisas:resultados' pesquisa.pk %}" title="Relatório">
+                            <i class="bi bi-bar-chart"></i>
+                        </a> 
+                        
+                        <!-- Botão Editar -->
+                        <a class="btn btn-sm btn-primary" href="{% url 'pesquisas:pesquisa_editar' pesquisa.pk %}" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        <!-- Botão Excluir -->
+                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ pesquisa.pk }}" title="Excluir">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <!-- Modal de Confirmação de Exclusão para cada pesquisa -->
+                <div class="modal fade" id="deleteModal{{ pesquisa.pk }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirmar exclusão</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                            </div>
+                            <div class="modal-body text-start">
+                                Tem certeza que deseja excluir a pesquisa <strong>"{{ pesquisa.titulo }}"</strong>? Esta ação não poderá ser desfeita.
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <form action="{% url 'pesquisas:pesquisa_excluir' pesquisa.pk %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">Sim, excluir</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-secondary py-4">Nenhuma pesquisa cadastrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.copy-link').forEach(button => button.addEventListener('click', async event => { 
+        event.preventDefault(); 
+        const input = document.getElementById(button.dataset.target); 
+        await navigator.clipboard.writeText(input.value); 
+        button.innerHTML = '<i class="bi bi-check2"></i>'; 
+        setTimeout(() => button.innerHTML = '<i class="bi bi-copy"></i>', 1200); 
+    }));
+</script>
+{% endblock %}

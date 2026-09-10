@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Pergunta {{ etapa }} · {{ pesquisa.titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .external-wrap {
+        background-image: 
+            linear-gradient(
+                rgba(0, 75, 70, 0.55),
+                rgba(0, 75, 70, 0.55)
+            ),
+            url("{% static 'pesquisas/img/background.jpg' %}") !important;
+
+        background-size: cover !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        background-attachment: fixed !important;
+        
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        min-height: 100vh !important;
+        padding: 2rem !important;
+    }
+    
+    .login-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .login-logo {
+        max-width: 220px;
+        height: auto;
+        display: block;
+        margin: 0 auto 1.75rem auto;
+    }
+
+    .login-card {
+        padding: 3rem 2.5rem !important;
+    }
+
+    .progress-bar {
+        background-color: #004b46 !important;
+    }
+
+    .btn-outline-primary {
+        color: #004b46 !important;
+        border-color: #004b46 !important;
+    }
+
+    .btn-outline-primary:hover, 
+    .btn-outline-primary:focus, 
+    .btn-outline-primary:active,
+    .btn-check:checked + .btn-outline-primary {
+        background-color: #004b46 !important;
+        border-color: #004b46 !important;
+        color: #ffffff !important;
+    }
+</style>
+{% endblock %}
+
+{% block public_content %}
+<div class="login-container">
+    <img src="{% static 'pesquisas/img/logo-grupo-flexivel.png' %}" alt="Grupo Flexível" class="login-logo">
+
+    <div class="card login-card shadow-lg">
+        <div class="d-flex justify-content-between small text-secondary mb-2">
+            <span>{{ pesquisa.titulo }}</span>
+            <span>{{ etapa }} de {{ total }}</span>
+        </div>
+
+        <div class="progress mb-4" style="height: 6px;">
+            <div class="progress-bar" style="width: {{ progresso }}%;"></div>
+        </div>
+
+        <h1 class="h4 mb-4">{{ pergunta.texto_pergunta }}</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                {% if pergunta.tipo_resposta == 'NOTA_0_10' %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for radio in form.valor %}
+                            <label class="btn btn-outline-primary px-3">
+                                {{ radio.tag }} {{ radio.choice_label }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.valor }}
+                {% endif %}
+                <div class="text-danger small">{{ form.valor.errors }}</div>
+            </div>
+            
+            <button class="btn btn-primary btn-lg w-100 text-white mt-2" type="submit">
+                {% if etapa == total %}Enviar respostas{% else %}Próximo{% endif %} 
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

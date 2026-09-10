@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 
 from .forms import ColaboradorForm, PerguntaFormSet, PesquisaForm, ResponderPerguntaForm, ValidarCPFForm
-from .models import Colaborador, DetalheResposta, Pergunta, Pesquisa, RespostaPesquisa
+from .models import Colaborador, DetalheResposta, Empresa, Pergunta, Pesquisa, RespostaPesquisa
 from .services import gerar_hash_cpf
 
 
@@ -39,10 +39,31 @@ def dashboard(request):
 @staff_required
 def colaborador_lista(request):
     termo = request.GET.get('q', '').strip()
-    colaboradores = Colaborador.objects.all()
+    empresa_id = request.GET.get('empresa', '').strip()
+    status = request.GET.get('status', '').strip()
+    
+    colaboradores = Colaborador.objects.select_related('empresa')
+    
     if termo:
-        colaboradores = colaboradores.filter(Q(nome__icontains=termo) | Q(cpf__icontains=termo))
-    return render(request, 'pesquisas/colaborador_lista.html', {'colaboradores': colaboradores, 'termo': termo})
+        colaboradores = colaboradores.filter(
+            Q(nome__icontains=termo) | Q(cpf__icontains=termo) | Q(empresa__nome__icontains=termo)
+        )
+        
+    if empresa_id:
+        colaboradores = colaboradores.filter(empresa_id=empresa_id)
+        
+    if status == 'ativo':
+        colaboradores = colaboradores.filter(ativo=True)
+    elif status == 'inativo':
+        colaboradores = colaboradores.filter(ativo=False)
+
+    return render(request, 'pesquisas/colaborador_lista.html', {
+        'colaboradores': colaboradores,
+        'termo': termo,
+        'empresas': Empresa.objects.all(),
+        'empresa_selecionada': empresa_id,
+        'status_selecionado': status,
+    })
 
 
 @staff_required
@@ -55,6 +76,27 @@ def colaborador_criar(request):
         messages.success(request, 'Colaborador cadastrado com sucesso.')
         return redirect('pesquisas:colaborador_lista')
     return render(request, 'pesquisas/colaborador_form.html', {'form': form})
+
+
+@staff_required
+def colaborador_editar(request, pk):
+    colaborador = get_object_or_404(Colaborador, pk=pk)
+    estava_ativo = colaborador.ativo
+    form = ColaboradorForm(request.POST or None, instance=colaborador)
+    if request.method == 'POST' and form.is_valid():
+        colaborador = form.save(commit=False)
+        if estava_ativo and not colaborador.ativo:
+            colaborador.data_inativacao = timezone.now()
+        elif not estava_ativo and colaborador.ativo:
+            colaborador.data_inativacao = None
+            colaborador.data_ativacao = timezone.now()
+        colaborador.save()
+        messages.success(request, 'Colaborador atualizado com sucesso.')
+        return redirect('pesquisas:colaborador_lista')
+    return render(request, 'pesquisas/colaborador_form.html', {
+        'form': form,
+        'colaborador': colaborador,
+    })
 
 
 @staff_required
@@ -73,21 +115,6 @@ def colaborador_alterar_status(request, pk):
     colaborador.save()
     status = 'ativo' if colaborador.ativo else 'inativo'
     messages.success(request, f'{colaborador.nome} agora está {status}.')
-    return redirect('pesquisas:colaborador_lista')
-
-
-@staff_required
-@require_POST
-def colaborador_excluir(request, pk):
-    colaborador = get_object_or_404(Colaborador, pk=pk)
-    nome = colaborador.nome
-    try:
-        colaborador.ativo = False
-        colaborador.data_inativacao = timezone.now()
-        colaborador.save()
-        messages.success(request, f'Colaborador {nome} desativado e removido do quadro ativo com sucesso.')
-    except Exception as e:
-        messages.error(request, f'Erro ao excluir colaborador: {str(e)}')
     return redirect('pesquisas:colaborador_lista')
 
 @staff_required
@@ -176,22 +203,43 @@ def pesquisa_excluir(request, pk):
 @staff_required
 def resultados(request, pk):
     pesquisa = get_object_or_404(Pesquisa, pk=pk)
+    empresas = Empresa.objects.all()
+    empresa_selecionada = None
+    empresa_id = request.GET.get('empresa', '').strip()
+    if empresa_id:
+        try:
+            empresa_selecionada = get_object_or_404(Empresa, pk=int(empresa_id))
+        except (TypeError, ValueError):
+            raise Http404('Empresa inválida.')
+
     pergunta_enps = pesquisa.perguntas.filter(tipo_resposta=Pergunta.TipoResposta.NOTA_0_10).first()
     
     # Lógica de contagem precisa considerando segundos e horário de ativação/inativação:
-    ativos = Colaborador.objects.filter(
+    colaboradores_elegiveis = Colaborador.objects.filter(
         data_criacao__lte=pesquisa.data_final
     ).exclude(
         Q(data_ativacao__gt=pesquisa.data_final)
     ).exclude(
         Q(ativo=False) & Q(data_inativacao__lt=pesquisa.data_inicio)
-    ).count()
+    )
+    if empresa_selecionada:
+        colaboradores_elegiveis = colaboradores_elegiveis.filter(empresa=empresa_selecionada)
 
-    respondentes = pesquisa.respostas.count()
+    ativos = colaboradores_elegiveis.count()
+    hashes_elegiveis = [
+        gerar_hash_cpf(cpf)
+        for cpf in colaboradores_elegiveis.values_list('cpf', flat=True).iterator()
+    ]
+    respostas = pesquisa.respostas.filter(hash_cpf_respondente__in=hashes_elegiveis)
+
+    respondentes = respostas.count()
 
     promotores = neutros = detratores = 0
     if pergunta_enps:
-        notas = DetalheResposta.objects.filter(pergunta=pergunta_enps)
+        notas = DetalheResposta.objects.filter(
+            pergunta=pergunta_enps,
+            resposta_pesquisa__in=respostas,
+        )
         promotores = notas.filter(valor_inteiro__gte=9).count()
         neutros = notas.filter(valor_inteiro__range=(7, 8)).count()
         detratores = notas.filter(valor_inteiro__range=(0, 6)).count()
@@ -205,7 +253,9 @@ def resultados(request, pk):
         qs_perguntas = qs_perguntas.exclude(pk=pergunta_enps.pk)
 
     for p in qs_perguntas:
-        detalhes = p.detalhes.select_related('resposta_pesquisa').all()
+        detalhes = p.detalhes.select_related('resposta_pesquisa').filter(
+            resposta_pesquisa__in=respostas,
+        )
         media = None
         if p.tipo_resposta == Pergunta.TipoResposta.NOTA_0_10 and detalhes.exists():
             soma = sum(d.valor_inteiro for d in detalhes if d.valor_inteiro is not None)
@@ -222,6 +272,7 @@ def resultados(request, pk):
         'respondentes': respondentes, 'percentual': percentual, 'promotores': promotores,
         'neutros': neutros, 'detratores': detratores, 'enps': enps,
         'perguntas_demais': perguntas_demais,
+        'empresas': empresas, 'empresa_selecionada': empresa_selecionada,
     })
 
 

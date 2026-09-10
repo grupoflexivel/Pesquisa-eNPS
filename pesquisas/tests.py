@@ -1,12 +1,16 @@
 from datetime import timedelta
+from io import StringIO
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Colaborador, DetalheResposta, Pergunta, Pesquisa, RespostaPesquisa, User, validar_cpf
+from .models import Colaborador, DetalheResposta, Empresa, Pergunta, Pesquisa, RespostaPesquisa, User, validar_cpf
 from .services import gerar_hash_cpf
 
 
@@ -17,6 +21,7 @@ CPF_VALIDO = '52998224725'
 class DominioTests(TestCase):
     def setUp(self):
         self.staff = User.objects.create_user('gestor', password='senha', is_staff=True)
+        self.empresa = Empresa.objects.create(nome='Matriz')
 
     def pesquisa(self, inicio=None):
         return Pesquisa.objects.create(
@@ -53,7 +58,8 @@ class DominioTests(TestCase):
 class FluxoExternoTests(TestCase):
     def setUp(self):
         self.staff = User.objects.create_user('gestor', password='senha', is_staff=True)
-        self.colaborador = Colaborador.objects.create(nome='Ana', cpf=CPF_VALIDO)
+        self.empresa = Empresa.objects.create(nome='Matriz')
+        self.colaborador = Colaborador.objects.create(nome='Ana', cpf=CPF_VALIDO, empresa=self.empresa)
         agora = timezone.now()
         self.pesquisa = Pesquisa.objects.create(
             titulo='eNPS trimestral', data_inicio=agora + timedelta(hours=1),
@@ -91,3 +97,84 @@ class FluxoExternoTests(TestCase):
         self.client.force_login(self.staff)
         self.assertContains(self.client.get(reverse('pesquisas:dashboard')), 'Dashboard')
         self.assertContains(self.client.get(reverse('pesquisas:resultados', args=[self.pesquisa.pk])), 'Resultados consolidados')
+
+    def test_edicao_manual_permite_trocar_empresa(self):
+        filial = Empresa.objects.create(nome='Filial')
+        self.client.force_login(self.staff)
+        url = reverse('pesquisas:colaborador_editar', args=[self.colaborador.pk])
+
+        self.assertContains(self.client.get(url), filial.nome)
+        resposta = self.client.post(url, {
+            'nome': self.colaborador.nome,
+            'cpf': self.colaborador.cpf,
+            'empresa': filial.pk,
+            'ativo': 'on',
+        })
+
+        self.assertRedirects(resposta, reverse('pesquisas:colaborador_lista'))
+        self.colaborador.refresh_from_db()
+        self.assertEqual(self.colaborador.empresa, filial)
+
+    def test_relatorio_filtra_elegiveis_e_respostas_por_empresa(self):
+        filial = Empresa.objects.create(nome='Filial')
+        outro = Colaborador.objects.create(nome='Bruno', cpf='11144477735', empresa=filial)
+        fora_do_periodo = Colaborador.objects.create(nome='Carla', cpf='12345678909', empresa=filial)
+        Colaborador.objects.filter(pk=fora_do_periodo.pk).update(
+            data_criacao=self.pesquisa.data_final + timedelta(seconds=1),
+        )
+
+        pergunta_enps = self.pesquisa.perguntas.filter(tipo_resposta=Pergunta.TipoResposta.NOTA_0_10).first()
+        for colaborador, nota in (
+            (self.colaborador, 10),
+            (outro, 5),
+            (fora_do_periodo, 0),
+        ):
+            resposta = RespostaPesquisa.objects.create(
+                pesquisa=self.pesquisa,
+                hash_cpf_respondente=gerar_hash_cpf(colaborador.cpf),
+            )
+            DetalheResposta.objects.create(
+                resposta_pesquisa=resposta,
+                pergunta=pergunta_enps,
+                valor_inteiro=nota,
+            )
+
+        self.client.force_login(self.staff)
+        url = reverse('pesquisas:resultados', args=[self.pesquisa.pk])
+
+        geral = self.client.get(url)
+        self.assertIsNone(geral.context['empresa_selecionada'])
+        self.assertEqual(geral.context['ativos'], 2)
+        self.assertEqual(geral.context['respondentes'], 2)
+        self.assertEqual(geral.context['promotores'], 1)
+        self.assertEqual(geral.context['detratores'], 1)
+
+        resultado_filial = self.client.get(url, {'empresa': filial.pk})
+        self.assertEqual(resultado_filial.context['empresa_selecionada'], filial)
+        self.assertEqual(resultado_filial.context['ativos'], 1)
+        self.assertEqual(resultado_filial.context['respondentes'], 1)
+        self.assertEqual(resultado_filial.context['promotores'], 0)
+        self.assertEqual(resultado_filial.context['detratores'], 1)
+
+
+@override_settings(SECRET_SALT='segredo-de-teste')
+class ImportacaoColaboradoresTests(TestCase):
+    def test_importa_empresa_sem_duplicar_por_diferenca_de_caixa(self):
+        with NamedTemporaryFile('w', encoding='utf-8', suffix='.csv', delete=False, newline='') as arquivo:
+            arquivo.write(
+                'nome,cpf,empresa\n'
+                'Ana Silva,52998224725,Matriz\n'
+                'Bruno Souza,11144477735,matriz\n'
+            )
+            caminho = Path(arquivo.name)
+
+        try:
+            saida = StringIO()
+            call_command('importar_colaboradores', caminho, stdout=saida)
+        finally:
+            caminho.unlink(missing_ok=True)
+
+        self.assertEqual(Empresa.objects.filter(nome__iexact='Matriz').count(), 1)
+        empresa = Empresa.objects.get(nome__iexact='Matriz')
+        self.assertEqual(empresa.colaboradores.count(), 2)
+        self.assertIn('2 criados', saida.getvalue())

@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}Novo colaborador · eNPS{% endblock %}
+{% block title %}{% if colaborador %}Editar{% else %}Novo{% endif %} colaborador · eNPS{% endblock %}
 
 {% block content %}
-<h1 class="h3 mb-4">Novo colaborador</h1>
+<h1 class="h3 mb-4">{% if colaborador %}Editar{% else %}Novo{% endif %} colaborador</h1>
 
 <div class="card p-4" style="max-width: 700px;">
     <form method="post">

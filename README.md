@@ -18,11 +18,11 @@ O carregamento em `enps/settings.py` usa `config(...)` da biblioteca `python-dec
 O arquivo deve ser UTF-8 e conter exatamente:
 
 ```csv
-nome,cpf
-Ana Silva,52998224725
+nome,cpf,empresa
+Ana Silva,52998224725,Filial São Paulo
 ```
 
-Importe com `python manage.py importar_colaboradores Colaboradores.csv`. Registros existentes são atualizados e reativados; qualquer linha inválida cancela toda a importação.
+Importe com `python manage.py importar_colaboradores Colaboradores.csv`. Empresas são criadas automaticamente, sem duplicidade de nomes (inclusive com diferenças apenas entre maiúsculas e minúsculas). Registros existentes são atualizados, vinculados à empresa informada e reativados; qualquer linha inválida cancela toda a importação.
 
 ## Regras relevantes
 

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Colaborador, DetalheResposta, Pergunta, Pesquisa, RespostaPesquisa, User
+from .models import Colaborador, DetalheResposta, Empresa, Pergunta, Pesquisa, RespostaPesquisa, User
 
 
 admin.site.site_header = 'Administração eNPS'
@@ -15,9 +15,14 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Colaborador)
 class ColaboradorAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'cpf', 'ativo')
-    list_filter = ('ativo',)
-    search_fields = ('nome', 'cpf')
+    list_display = ('nome', 'cpf', 'empresa', 'ativo')
+    list_filter = ('empresa', 'ativo')
+    search_fields = ('nome', 'cpf', 'empresa__nome')
+
+
+@admin.register(Empresa)
+class EmpresaAdmin(admin.ModelAdmin):
+    search_fields = ('nome',)
 
 
 class PerguntaInline(admin.TabularInline):

@@ -6,6 +6,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 
@@ -32,9 +33,23 @@ class User(AbstractUser):
         verbose_name_plural = 'usuários'
 
 
+class Empresa(models.Model):
+    nome = models.CharField(max_length=200, unique=True)
+
+    class Meta:
+        ordering = ('nome',)
+        constraints = [
+            models.UniqueConstraint(Lower('nome'), name='empresa_nome_unico_case_insensitive'),
+        ]
+
+    def __str__(self):
+        return self.nome
+
+
 class Colaborador(models.Model):
     nome = models.CharField(max_length=200)
     cpf = models.CharField(max_length=11, unique=True, validators=[validar_cpf])
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='colaboradores')
     ativo = models.BooleanField(default=True)
 
     data_criacao = models.DateTimeField(default=timezone.now)

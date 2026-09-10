@@ -22,7 +22,7 @@ class ColaboradorForm(BootstrapMixin, forms.ModelForm):
 
     class Meta:
         model = Colaborador
-        fields = ('nome', 'cpf', 'ativo')
+        fields = ('nome', 'cpf', 'empresa', 'ativo')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

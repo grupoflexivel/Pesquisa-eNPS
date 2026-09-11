@@ -2,12 +2,12 @@
 
 set -e
 
-POSTGRES_HOST="${POSTGRES_HOST:-db}"
-POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+DB_HOST="${DB_HOST:-db}"
+DB_PORT="${DB_PORT:-5432}"
 
 echo "Aguardando PostgreSQL..."
 
-while ! nc -z "$POSTGRES_HOST" "$POSTGRES_PORT"; do
+while ! nc -z "$DB_HOST" "$DB_PORT"; do
     sleep 1
 done
 

@@ -14,7 +14,7 @@
 <div class="card p-4">
     <form class="row g-2 mb-3" method="get">
         <div class="col-md-5">
-            <input class="form-control" name="q" value="{{ termo }}" placeholder="Buscar por nome ou CPF">
+            <input class="form-control" name="q" value="{{ termo }}" placeholder="Buscar por nome, CPF ou CNPJ">
         </div>
         <div class="col-md-3">
             <select name="empresa" class="form-select">
@@ -43,7 +43,7 @@
             <thead>
                 <tr>
                     <th>Nome</th>
-                    <th>CPF</th>
+                    <th>CPF / CNPJ</th>
                     <th>Empresa</th>
                     <th>Status</th>
                     <th class="text-end">Ações</th>
@@ -53,7 +53,7 @@
                 {% for colaborador in colaboradores %}
                 <tr>
                     <td>{{ colaborador.nome }}</td>
-                    <td>{{ colaborador.cpf }}</td>
+                    <td>{{ colaborador.documento }}</td>
                     <td>{{ colaborador.empresa.nome }}</td>
                     <td>
                         {% if colaborador.ativo %}

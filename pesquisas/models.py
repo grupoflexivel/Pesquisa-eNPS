@@ -14,8 +14,7 @@ def somente_digitos(valor):
     return re.sub(r'\D', '', valor or '')
 
 
-def validar_cpf(valor):
-    cpf = somente_digitos(valor)
+def validar_cpf(cpf):
     if len(cpf) != 11 or cpf == cpf[0] * 11:
         raise ValidationError('Informe um CPF válido com 11 dígitos.')
     for tamanho in (9, 10):
@@ -23,6 +22,38 @@ def validar_cpf(valor):
         digito = (soma * 10 % 11) % 10
         if digito != int(cpf[tamanho]):
             raise ValidationError('Informe um CPF válido.')
+
+
+def validar_cnpj(cnpj):
+    if len(cnpj) != 14 or cnpj == cnpj[0] * 14:
+        
+        raise ValidationError('Informe um CNPJ válido com 14 dígitos.')
+    
+    # Validação do primeiro dígito verificador
+    pesos_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    soma = sum(int(cnpj[i]) * pesos_1[i] for i in range(12))
+    digito = soma % 11
+    digito = 0 if digito < 2 else 11 - digito
+    if digito != int(cnpj[12]):
+        raise ValidationError('Informe um CNPJ válido.')
+
+    # Validação do segundo dígito verificador
+    pesos_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    soma = sum(int(cnpj[i]) * pesos_2[i] for i in range(13))
+    digito = soma % 11
+    digito = 0 if digito < 2 else 11 - digito
+    if digito != int(cnpj[13]):
+        raise ValidationError('Informe um CNPJ válido.')
+
+
+def validar_documento(valor):
+    documento = somente_digitos(valor)
+    if len(documento) == 11:
+        validar_cpf(documento)
+    elif len(documento) == 14:
+        validar_cnpj(documento)
+    else:
+        raise ValidationError('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.')
 
 
 class User(AbstractUser):
@@ -48,7 +79,7 @@ class Empresa(models.Model):
 
 class Colaborador(models.Model):
     nome = models.CharField(max_length=200)
-    cpf = models.CharField(max_length=11, unique=True, validators=[validar_cpf])
+    documento = models.CharField(max_length=14, unique=True, validators=[validar_documento])
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='colaboradores')
     ativo = models.BooleanField(default=True)
 
@@ -61,11 +92,11 @@ class Colaborador(models.Model):
 
     def clean(self):
         super().clean()
-        self.cpf = somente_digitos(self.cpf)
-        validar_cpf(self.cpf)
+        self.documento = somente_digitos(self.documento)
+        validar_documento(self.documento)
 
     def save(self, *args, **kwargs):
-        self.cpf = somente_digitos(self.cpf)
+        self.documento = somente_digitos(self.documento)
         self.full_clean()
         return super().save(*args, **kwargs)
 
@@ -141,11 +172,11 @@ class Pergunta(models.Model):
 class RespostaPesquisa(models.Model):
     pesquisa = models.ForeignKey(Pesquisa, on_delete=models.CASCADE, related_name='respostas')
     data_resposta = models.DateTimeField(default=timezone.now, editable=False)
-    hash_cpf_respondente = models.CharField(max_length=64, editable=False)
+    hash_documento_respondente = models.CharField(max_length=64, editable=False)
 
     class Meta:
         ordering = ('-data_resposta',)
-        constraints = [models.UniqueConstraint(fields=('pesquisa', 'hash_cpf_respondente'), name='resposta_unica_por_cpf_e_pesquisa')]
+        constraints = [models.UniqueConstraint(fields=('pesquisa', 'hash_documento_respondente'), name='resposta_unica_por_documento_e_pesquisa')]
 
     def __str__(self):
         return f'Resposta anônima #{self.pk} - {self.pesquisa}'

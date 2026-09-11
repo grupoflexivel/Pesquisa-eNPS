@@ -2,7 +2,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 
-from .models import Colaborador, Pergunta, Pesquisa, somente_digitos, validar_cpf
+from .models import Colaborador, Pergunta, Pesquisa, somente_digitos, validar_documento
 
 
 class BootstrapMixin:
@@ -15,23 +15,23 @@ class BootstrapMixin:
 
 
 class ColaboradorForm(BootstrapMixin, forms.ModelForm):
-    cpf = forms.CharField(
-        label='CPF', max_length=14,
-        widget=forms.TextInput(attrs={'inputmode': 'numeric', 'maxlength': '14'}),
+    documento = forms.CharField(
+        label='CPF ou CNPJ', max_length=18,
+        widget=forms.TextInput(attrs={'inputmode': 'numeric', 'maxlength': '18', 'placeholder': 'Digite CPF ou CNPJ'}),
     )
 
     class Meta:
         model = Colaborador
-        fields = ('nome', 'cpf', 'empresa', 'ativo')
+        fields = ('nome', 'documento', 'empresa', 'ativo')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.aplicar_bootstrap()
 
-    def clean_cpf(self):
-        cpf = somente_digitos(self.cleaned_data['cpf'])
-        validar_cpf(cpf)
-        return cpf
+    def clean_documento(self):
+        documento = somente_digitos(self.cleaned_data['documento'])
+        validar_documento(documento)
+        return documento
 
 
 class PesquisaForm(BootstrapMixin, forms.ModelForm):
@@ -87,16 +87,19 @@ PerguntaFormSet = inlineformset_factory(
 
 
 class ValidarCPFForm(BootstrapMixin, forms.Form):
-    cpf = forms.CharField(label='CPF', max_length=14, widget=forms.TextInput(attrs={'inputmode': 'numeric', 'autocomplete': 'off'}))
+    documento = forms.CharField(
+        label='CPF ou CNPJ', max_length=18, 
+        widget=forms.TextInput(attrs={'inputmode': 'numeric', 'autocomplete': 'off', 'maxlength': '18'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.aplicar_bootstrap()
 
-    def clean_cpf(self):
-        cpf = somente_digitos(self.cleaned_data['cpf'])
-        validar_cpf(cpf)
-        return cpf
+    def clean_documento(self):
+        documento = somente_digitos(self.cleaned_data['documento'])
+        validar_documento(documento)
+        return documento
 
 
 class ResponderPerguntaForm(BootstrapMixin, forms.Form):

@@ -15,9 +15,9 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Colaborador)
 class ColaboradorAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'cpf', 'empresa', 'ativo')
+    list_display = ('nome', 'documento', 'empresa', 'ativo')
     list_filter = ('empresa', 'ativo')
-    search_fields = ('nome', 'cpf', 'empresa__nome')
+    search_fields = ('nome', 'documento', 'empresa__nome')
 
 
 @admin.register(Empresa)
@@ -68,7 +68,7 @@ class PesquisaAdmin(admin.ModelAdmin):
 class RespostaPesquisaAdmin(admin.ModelAdmin):
     list_display = ('id', 'pesquisa', 'data_resposta')
     list_filter = ('pesquisa',)
-    readonly_fields = ('pesquisa', 'data_resposta', 'hash_cpf_respondente')
+    readonly_fields = ('pesquisa', 'data_resposta', 'hash_documento_respondente')
     search_fields = ('pesquisa__titulo',)
 
     def has_add_permission(self, request):

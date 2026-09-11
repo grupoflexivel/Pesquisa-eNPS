@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 
 from .forms import ColaboradorForm, PerguntaFormSet, PesquisaForm, ResponderPerguntaForm, ValidarCPFForm
 from .models import Colaborador, DetalheResposta, Empresa, Pergunta, Pesquisa, RespostaPesquisa
-from .services import gerar_hash_cpf
+from .services import gerar_hash_documento
 
 
 staff_required = user_passes_test(lambda user: user.is_authenticated and user.is_staff)
@@ -46,7 +46,7 @@ def colaborador_lista(request):
     
     if termo:
         colaboradores = colaboradores.filter(
-            Q(nome__icontains=termo) | Q(cpf__icontains=termo) | Q(empresa__nome__icontains=termo)
+            Q(nome__icontains=termo) | Q(documento__icontains=termo) | Q(empresa__nome__icontains=termo)
         )
         
     if empresa_id:
@@ -227,10 +227,10 @@ def resultados(request, pk):
 
     ativos = colaboradores_elegiveis.count()
     hashes_elegiveis = [
-        gerar_hash_cpf(cpf)
-        for cpf in colaboradores_elegiveis.values_list('cpf', flat=True).iterator()
+        gerar_hash_documento(documento)
+        for documento in colaboradores_elegiveis.values_list('documento', flat=True).iterator()
     ]
-    respostas = pesquisa.respostas.filter(hash_cpf_respondente__in=hashes_elegiveis)
+    respostas = pesquisa.respostas.filter(hash_documento_respondente__in=hashes_elegiveis)
 
     respondentes = respostas.count()
 
@@ -290,15 +290,15 @@ def validar_participante(request, link_uuid):
     form = ValidarCPFForm(request.POST or None)
     erro = indisponivel
     if request.method == 'POST' and not indisponivel and form.is_valid():
-        cpf = form.cleaned_data['cpf']
-        if not Colaborador.objects.filter(cpf=cpf, ativo=True).exists():
-            erro = 'CPF não encontrado ou colaborador inativo.'
+        documento = form.cleaned_data['documento']
+        if not Colaborador.objects.filter(documento=documento, ativo=True).exists():
+            erro = 'CPF/CNPJ não encontrado ou colaborador inativo.'
         else:
-            hash_cpf = gerar_hash_cpf(cpf)
-            if pesquisa.respostas.filter(hash_cpf_respondente=hash_cpf).exists():
-                erro = 'Uma resposta já foi enviada para este CPF.'
+            hash_documento = gerar_hash_documento(documento)
+            if pesquisa.respostas.filter(hash_documento_respondente=hash_documento).exists():
+                erro = 'Uma resposta já foi enviada para este documento.'
             else:
-                request.session[f'pesquisa_auth_{link_uuid}'] = hash_cpf
+                request.session[f'pesquisa_auth_{link_uuid}'] = hash_documento
                 request.session[f'pesquisa_respostas_{link_uuid}'] = {}
                 return redirect('pesquisas:responder_etapa', link_uuid=link_uuid, etapa=1)
     return render(request, 'pesquisas/validar_cpf.html', {
@@ -308,11 +308,11 @@ def validar_participante(request, link_uuid):
 
 def responder_etapa(request, link_uuid, etapa):
     pesquisa, indisponivel = _pesquisa_disponivel(link_uuid)
-    hash_cpf = request.session.get(f'pesquisa_auth_{link_uuid}')
-    if indisponivel or not hash_cpf:
-        messages.error(request, indisponivel or 'Valide seu CPF antes de responder.')
-        return redirect('pesquisas:responder', link_uuid=link_uuid)
-    if pesquisa.respostas.filter(hash_cpf_respondente=hash_cpf).exists():
+    hash_documento = request.session.get(f'pesquisa_auth_{link_uuid}')
+    if indisponivel or not hash_documento:
+        messages.error(request, indisponivel or 'Valide seu CPF ou CNPJ antes de responder.')
+        return redirect('pesquisas:validar_participante', link_uuid=link_uuid)
+    if pesquisa.respostas.filter(hash_documento_respondente=hash_documento).exists():
         request.session[f'pesquisa_concluida_{link_uuid}'] = True
         return redirect('pesquisas:agradecimento', link_uuid=link_uuid)
     perguntas = list(pesquisa.perguntas.all())
@@ -332,7 +332,7 @@ def responder_etapa(request, link_uuid, etapa):
             return redirect('pesquisas:responder_etapa', link_uuid=link_uuid, etapa=etapa + 1)
         try:
             with transaction.atomic():
-                resposta = RespostaPesquisa.objects.create(pesquisa=pesquisa, hash_cpf_respondente=hash_cpf)
+                resposta = RespostaPesquisa.objects.create(pesquisa=pesquisa, hash_documento_respondente=hash_documento)
                 for item in perguntas:
                     valor = respostas.get(str(item.pk))
                     DetalheResposta.objects.create(
@@ -355,5 +355,5 @@ def responder_etapa(request, link_uuid, etapa):
 def agradecimento(request, link_uuid):
     pesquisa = get_object_or_404(Pesquisa, link_uuid=link_uuid)
     if not request.session.get(f'pesquisa_concluida_{link_uuid}', False):
-        return redirect('pesquisas:responder', link_uuid=link_uuid)
+        return redirect('pesquisas:validar_participante', link_uuid=link_uuid)
     return render(request, 'pesquisas/agradecimento.html', {'pesquisa': pesquisa, 'hide_sidebar': True})

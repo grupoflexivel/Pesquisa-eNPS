@@ -9,7 +9,7 @@ from pesquisas.models import Colaborador, Empresa, somente_digitos
 
 
 class Command(BaseCommand):
-    help = 'Importa colaboradores ativos de um CSV UTF-8 com as colunas nome, cpf e empresa (aceita vírgula ou ponto e vírgula).'
+    help = 'Importa colaboradores ativos de um CSV UTF-8 com as colunas nome, documento e empresa (aceita vírgula ou ponto e vírgula).'
 
     def add_arguments(self, parser):
         parser.add_argument('arquivo_csv', type=Path)
@@ -30,15 +30,15 @@ class Command(BaseCommand):
                     delimitador = ','
 
                 leitor = csv.DictReader(arquivo, delimiter=delimitador)
-                if leitor.fieldnames != ['nome', 'cpf', 'empresa']:
+                if leitor.fieldnames != ['nome', 'documento', 'empresa']:
                     raise CommandError(
-                        'O CSV deve conter exatamente as colunas nome,cpf,empresa, '
+                        'O CSV deve conter exatamente as colunas nome,documento,empresa, '
                         f'nesta ordem (encontrado: {leitor.fieldnames}).'
                     )
 
                 for numero, linha in enumerate(leitor, start=2):
                     nome = (linha.get('nome') or '').strip()
-                    cpf = somente_digitos(linha.get('cpf'))
+                    documento = somente_digitos(linha.get('documento'))
                     nome_empresa = ' '.join((linha.get('empresa') or '').split())
                     if not nome:
                         raise CommandError(f'Linha {numero}: nome vazio.')
@@ -51,7 +51,7 @@ class Command(BaseCommand):
                             empresa.full_clean()
                             empresa.save()
                         colaborador, criado = Colaborador.objects.update_or_create(
-                            cpf=cpf, defaults={'nome': nome, 'empresa': empresa, 'ativo': True}
+                            documento=documento, defaults={'nome': nome, 'empresa': empresa, 'ativo': True}
                         )
                     except ValidationError as exc:
                         raise CommandError(f'Linha {numero}: {exc}') from exc

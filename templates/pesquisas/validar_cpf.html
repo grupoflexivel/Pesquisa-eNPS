@@ -50,7 +50,7 @@
 
     <div class="card login-card shadow-lg">
         <h1 class="h3 mb-2">{{ pesquisa.titulo }}</h1>
-        <p class="text-secondary mb-4">Informe seu CPF para validar sua participação. Ele não será armazenado junto às respostas.</p>
+        <p class="text-secondary mb-4">Informe seu CPF ou CNPJ para validar sua participação. O dado não será armazenado junto às respostas.</p>
         
         {% if erro %}
             <div class="alert alert-danger">{{ erro }}</div>
@@ -59,9 +59,9 @@
         <form method="post" novalidate>
             {% csrf_token %}
             <div class="mb-4">
-                {{ form.cpf.label_tag }}
-                {{ form.cpf }}
-                <div class="text-danger small">{{ form.cpf.errors }}</div>
+                {{ form.documento.label_tag }}
+                {{ form.documento }}
+                <div class="text-danger small">{{ form.documento.errors }}</div>
             </div>
             <button class="btn btn-primary btn-lg w-100 text-white mt-2" type="submit" {% if erro and not pesquisa.vigente %}disabled{% endif %}>
                 Continuar

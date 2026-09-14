@@ -42,7 +42,7 @@ def colaborador_lista(request):
     empresa_id = request.GET.get('empresa', '').strip()
     status = request.GET.get('status', '').strip()
     
-    colaboradores = Colaborador.objects.select_related('empresa')
+    colaboradores = Colaborador.objects.select_related('empresa', 'usuario')
     
     if termo:
         colaboradores = colaboradores.filter(
@@ -70,9 +70,9 @@ def colaborador_lista(request):
 def colaborador_criar(request):
     form = ColaboradorForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        colaborador = form.save(commit=False)
+        colaborador = form.save()
         colaborador.data_ativacao = timezone.now()
-        colaborador.save()
+        colaborador.save(update_fields=['data_ativacao'])
         messages.success(request, 'Colaborador cadastrado com sucesso.')
         return redirect('pesquisas:colaborador_lista')
     return render(request, 'pesquisas/colaborador_form.html', {'form': form})
@@ -84,13 +84,20 @@ def colaborador_editar(request, pk):
     estava_ativo = colaborador.ativo
     form = ColaboradorForm(request.POST or None, instance=colaborador)
     if request.method == 'POST' and form.is_valid():
-        colaborador = form.save(commit=False)
+        colaborador = form.save()
+        
+        mudou_status = False
         if estava_ativo and not colaborador.ativo:
             colaborador.data_inativacao = timezone.now()
+            mudou_status = True
         elif not estava_ativo and colaborador.ativo:
             colaborador.data_inativacao = None
             colaborador.data_ativacao = timezone.now()
-        colaborador.save()
+            mudou_status = True
+            
+        if mudou_status:
+            colaborador.save(update_fields=['data_inativacao', 'data_ativacao'])
+            
         messages.success(request, 'Colaborador atualizado com sucesso.')
         return redirect('pesquisas:colaborador_lista')
     return render(request, 'pesquisas/colaborador_form.html', {

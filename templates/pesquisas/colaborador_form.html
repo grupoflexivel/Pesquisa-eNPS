@@ -11,19 +11,53 @@
         {{ form.non_field_errors }}
         
         {% for field in form %}
-            <div class="mb-3 {% if field.name == 'ativo' %}form-check{% endif %}">
-                {% if field.name == 'ativo' %}
-                    {{ field }} {{ field.label_tag }}
-                {% else %}
+            {% if field.name == 'username' %}
+                <!-- Campo de username condicional (oculto por padrão se não for superusuário) -->
+                <div class="mb-3" id="div_id_username" style="display: none;">
                     {{ field.label_tag }}
                     {{ field }}
-                {% endif %}
-                <div class="text-danger small">{{ field.errors }}</div>
-            </div>
+                    <div class="text-danger small">{{ field.errors }}</div>
+                </div>
+            {% else %}
+                <div class="mb-3 {% if field.name == 'ativo' or field.name == 'is_superuser' %}form-check{% endif %}">
+                    {% if field.name == 'ativo' or field.name == 'is_superuser' %}
+                        {{ field }} {{ field.label_tag }}
+                    {% else %}
+                        {{ field.label_tag }}
+                        {{ field }}
+                    {% endif %}
+                    <div class="text-danger small">{{ field.errors }}</div>
+                </div>
+            {% endif %}
         {% endfor %}
 
         <button class="btn btn-primary" type="submit">Salvar</button>
         <a class="btn btn-light" href="{% url 'pesquisas:colaborador_lista' %}">Cancelar</a>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkboxSuper = document.getElementById('id_is_superuser');
+        const divUsername = document.getElementById('div_id_username');
+        const inputUsername = document.getElementById('id_username');
+
+        if (checkboxSuper && divUsername) {
+            function toggleUsername() {
+                if (checkboxSuper.checked) {
+                    divUsername.style.display = 'block';
+                } else {
+                    divUsername.style.display = 'none';
+                    if (inputUsername) inputUsername.value = ''; // Limpa o campo se desmarcar
+                }
+            }
+
+            // Executa ao carregar a página (útil em caso de erro de validação com o checkbox marcado)
+            toggleUsername();
+
+            // Executa ao alterar o checkbox
+            checkboxSuper.addEventListener('change', toggleUsername);
+        }
+    });
+</script>
 {% endblock %}

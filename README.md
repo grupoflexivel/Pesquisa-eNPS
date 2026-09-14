@@ -13,6 +13,18 @@ Aplicação Django com PostgreSQL para cadastro de colaboradores, pesquisas com 
 
 O carregamento em `enps/settings.py` usa `config(...)` da biblioteca `python-decouple`. O banco padrão é sempre PostgreSQL; SQLite é usado apenas no arquivo isolado de configuração de testes.
 
+## Active Directory
+
+A autenticação é híbrida: usuários com origem `LOCAL` usam a senha da aplicação; usuários com origem `DIRECTORY` autenticam com a senha de rede via LDAP. O AD não cria usuários, não sincroniza atributos e não fornece permissões.
+
+1. Instale as dependências com `pip install -r requirements.txt`.
+2. Preencha no `.env` somente `LDAP_SERVER`, `LDAP_DOMAIN`, `LDAP_BASE_DN`, `LDAP_BIND_USER` e `LDAP_BIND_PASSWORD`. `LDAP_SERVER` pode ser `ldap://host:389` (StartTLS automático) ou `ldaps://host:636`.
+3. Execute `python manage.py migrate` e, no admin, crie/altere o usuário para origem `Active Directory`. Usuários existentes permanecem `LOCAL` pela migração.
+
+No primeiro login AD bem-sucedido, o `objectGUID` é gravado; divergências bloqueiam o login e exigem a ação administrativa “Religar identidade AD”. Desabilitar a conta no AD impede novos logins, enquanto desativar o cadastro local continua sendo uma ação manual. Usuários AD não podem trocar ou recuperar senha localmente. A sessão dura no máximo 8 horas e expira ao fechar o navegador.
+
+Se o DC ficar indisponível, usuários AD recebem uma mensagem específica sem incremento de tentativas; usuários locais continuam entrando. Para produção, prefira `ldaps://`, pois LDAP puro transmite as credenciais sem criptografia. Mantenha uma conta local de emergência, com senha definida fora do código, para contingência operacional.
+
 ## CSV
 
 O arquivo deve ser UTF-8 e conter exatamente:

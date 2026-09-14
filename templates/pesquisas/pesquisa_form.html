@@ -98,6 +98,18 @@
 
 {% block extra_js %}
 <script>
+    function traduzirSelectsVazios() {
+        document.querySelectorAll('select').forEach(select => {
+            select.querySelectorAll('option').forEach(option => {
+                if (option.value === "" && (option.text.includes("Select") || option.text.includes("---------"))) {
+                    option.text = "Selecione uma opção";
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', traduzirSelectsVazios);
+
     const addBtn = document.getElementById('addQuestion');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
@@ -106,6 +118,8 @@
             const html = document.getElementById('emptyQuestion').innerHTML.replaceAll('__prefix__', index);
             document.getElementById('questions').insertAdjacentHTML('beforeend', html);
             total.value = index + 1;
+            
+            traduzirSelectsVazios();
         });
     }
 </script>

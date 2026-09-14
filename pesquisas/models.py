@@ -59,6 +59,28 @@ def validar_documento(valor):
 class User(AbstractUser):
     """Usuário administrativo; colaboradores não precisam de login."""
 
+    class AuthSource(models.TextChoices):
+        LOCAL = 'LOCAL', 'Senha local'
+        DIRECTORY = 'DIRECTORY', 'Active Directory'
+
+    auth_source = models.CharField(
+        max_length=10,
+        choices=AuthSource.choices,
+        default=AuthSource.LOCAL,
+    )
+    directory_guid = models.UUIDField(
+        null=True,
+        blank=True,
+        unique=True,
+        editable=False,
+    )
+    failed_login_attempts = models.PositiveIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.username = (self.username or '').strip().lower()
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = 'usuário'
         verbose_name_plural = 'usuários'
@@ -83,6 +105,14 @@ class Colaborador(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='colaboradores')
     ativo = models.BooleanField(default=True)
 
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='colaborador'
+    )
+    
     data_criacao = models.DateTimeField(default=timezone.now)
     data_inativacao = models.DateTimeField(null=True, blank=True)
     data_ativacao = models.DateTimeField(null=True, blank=True)

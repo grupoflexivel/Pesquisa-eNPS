@@ -1,6 +1,6 @@
 {% load static %}
-<aside class="sidebar p-3 d-flex flex-column" id="sidebar" style="background-color: #004b46;">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+<aside class="sidebar p-3 d-flex flex-column" id="sidebar" style="background-color: #004b46; height: 100vh; position: sticky; top: 0;">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-shrink-0">
         <a class="text-decoration-none d-flex align-items-center overflow-hidden" href="{% url 'pesquisas:dashboard' %}">
             <img src="{% static 'pesquisas/img/logo-grupo-flexivel.png' %}" alt="Logo" class="sidebar-logo-full" style="height: 32px; object-fit: contain;">
         </a>
@@ -9,7 +9,7 @@
         </button>
     </div>
     
-    <nav class="nav nav-pills flex-column gap-1">
+    <nav class="nav nav-pills flex-column gap-1 overflow-y-auto flex-grow-1 pe-1">
         <a class="nav-link text-white {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'pesquisas:dashboard' %}">
             <i class="bi bi-grid"></i><span class="label">Dashboard / Relatórios</span>
         </a>
@@ -29,7 +29,7 @@
         {% endif %}
     </nav>
 
-    <div class="mt-auto pt-4 border-top border-secondary">
+    <div class="mt-auto pt-4 border-top border-secondary flex-shrink-0">
         <div class="user-info small text-white-50 mb-2">{{ user.get_full_name|default:user.username }}</div>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
@@ -43,5 +43,13 @@
 <style>
     .sidebar.collapsed .sidebar-logo-full {
         display: none !important;
+    }
+    
+    .sidebar nav::-webkit-scrollbar {
+        width: 4px;
+    }
+    .sidebar nav::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
     }
 </style>

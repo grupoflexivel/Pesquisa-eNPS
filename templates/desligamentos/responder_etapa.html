@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Pergunta {{ etapa }} · {{ formulario.nome }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .external-wrap {
+        background-image:
+            linear-gradient(
+                rgba(0, 75, 70, 0.55),
+                rgba(0, 75, 70, 0.55)
+            ),
+            url("{% static 'pesquisas/img/background.jpg' %}") !important;
+
+        background-size: cover !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        background-attachment: fixed !important;
+
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        min-height: 100vh !important;
+        padding: 2rem !important;
+    }
+
+    .login-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .login-logo {
+        max-width: 220px;
+        height: auto;
+        display: block;
+        margin: 0 auto 1.75rem auto;
+    }
+
+    .login-card {
+        padding: 3rem 2.5rem !important;
+    }
+
+    .progress-bar {
+        background-color: #004b46 !important;
+    }
+
+    .btn-outline-primary {
+        color: #004b46 !important;
+        border-color: #004b46 !important;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus,
+    .btn-outline-primary:active,
+    .btn-check:checked + .btn-outline-primary {
+        background-color: #004b46 !important;
+        border-color: #004b46 !important;
+        color: #ffffff !important;
+    }
+
+    .opcao-row {
+        display: block;
+        border: 1px solid #dee2e6;
+        border-radius: .6rem;
+        padding: .65rem .9rem;
+        margin-bottom: .5rem;
+        cursor: pointer;
+    }
+    .opcao-row input { margin-right: .6rem; }
+    .opcao-row.selecionada { border-color: #004b46; background: rgba(0, 75, 70, .06); }
+</style>
+{% endblock %}
+
+{% block public_content %}
+<div class="login-container">
+    <img src="{% static 'pesquisas/img/logo-grupo-flexivel.png' %}" alt="Grupo Flexível" class="login-logo">
+
+    <div class="card login-card shadow-lg">
+        <div class="d-flex justify-content-between small text-secondary mb-2">
+            <span>{{ formulario.nome }}</span>
+            <span>{{ etapa }} de {{ total }}</span>
+        </div>
+
+        <div class="progress mb-4" style="height: 6px;">
+            <div class="progress-bar" style="width: {{ progresso }}%;"></div>
+        </div>
+
+        <h1 class="h4 mb-4">{{ pergunta.texto_pergunta }}</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                {% if pergunta.tipo_resposta == 'NOTA_0_10' %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for radio in form.valor %}
+                            <label class="btn btn-outline-primary px-3">
+                                {{ radio.tag }} {{ radio.choice_label }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                {% elif pergunta.tipo_resposta == 'RADIO' or pergunta.tipo_resposta == 'CHECKBOX' %}
+                    {% for opcao in form.valor %}
+                        <label class="opcao-row">
+                            {{ opcao.tag }} {{ opcao.choice_label }}
+                        </label>
+                    {% endfor %}
+                {% else %}
+                    {{ form.valor }}
+                {% endif %}
+                <div class="text-danger small">{{ form.valor.errors }}</div>
+            </div>
+
+            <div class="d-flex gap-2">
+                {% if etapa > 1 %}
+                    <a class="btn btn-outline-secondary" href="{% url 'desligamentos:responder_etapa' formulario.link_uuid etapa|add:'-1' %}">
+                        <i class="bi bi-arrow-left"></i> Anterior
+                    </a>
+                {% endif %}
+                <button class="btn btn-primary btn-lg flex-fill text-white" type="submit">
+                    {% if etapa == total %}Finalizar e enviar{% else %}Próximo{% endif %}
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.opcao-row input').forEach(input => {
+        const row = input.closest('.opcao-row');
+        const sync = () => row.classList.toggle('selecionada', input.checked);
+        input.addEventListener('change', () => {
+            if (input.type === 'radio') {
+                document.querySelectorAll('.opcao-row').forEach(r => r.classList.remove('selecionada'));
+            }
+            sync();
+        });
+        sync();
+    });
+</script>
+{% endblock %}

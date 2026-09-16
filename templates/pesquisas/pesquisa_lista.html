@@ -28,7 +28,7 @@
                     <td class="fw-semibold">{{ pesquisa.titulo }}</td>
                     <td>
                         <div class="input-group input-group-sm" style="min-width: 280px;">
-                            <input class="form-control" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'pesquisas:responder' pesquisa.link_uuid %}" id="link-{{ pesquisa.pk }}">
+                            <input class="form-control" readonly value="{{ pesquisa.link_completo }}" id="link-{{ pesquisa.pk }}">
                             <button class="btn btn-outline-secondary copy-link" data-target="link-{{ pesquisa.pk }}" title="Copiar">
                                 <i class="bi bi-copy"></i>
                             </button>

@@ -16,6 +16,31 @@ from .services import gerar_hash_documento
 staff_required = user_passes_test(lambda user: user.is_authenticated and user.is_staff)
 
 
+def _formularios_desligamento_por_iniciativa():
+    from desligamentos.models import FormularioDesligamento
+    formularios = FormularioDesligamento.objects.all()
+    return {
+        'formularios_empresa': [f for f in formularios if f.iniciativa == FormularioDesligamento.Iniciativa.EMPRESA],
+        'formularios_colaborador': [f for f in formularios if f.iniciativa == FormularioDesligamento.Iniciativa.COLABORADOR],
+    }
+
+
+def _validar_formulario_desligamento(request):
+    from desligamentos.models import FormularioDesligamento
+
+    iniciativa = request.POST.get('iniciativa', '').strip()
+    if iniciativa not in FormularioDesligamento.Iniciativa.values:
+        messages.error(request, 'Selecione o motivo do desligamento (iniciativa da empresa ou do colaborador).')
+        return None, None
+    formulario = FormularioDesligamento.objects.filter(
+        pk=request.POST.get('formulario_id', '').strip() or None, iniciativa=iniciativa,
+    ).first()
+    if not formulario:
+        messages.error(request, 'Selecione um formulário de desligamento válido para a iniciativa informada.')
+        return None, None
+    return iniciativa, formulario
+
+
 def _status_pesquisa(pesquisa):
     agora = timezone.now()
     if agora < pesquisa.data_inicio:
@@ -63,6 +88,7 @@ def colaborador_lista(request):
         'empresas': Empresa.objects.all(),
         'empresa_selecionada': empresa_id,
         'status_selecionado': status,
+        **_formularios_desligamento_por_iniciativa(),
     })
 
 
@@ -80,48 +106,77 @@ def colaborador_criar(request):
 
 @staff_required
 def colaborador_editar(request, pk):
+    from desligamentos.services import cancelar_desligamentos_abertos, registrar_desligamento_pendente
+
     colaborador = get_object_or_404(Colaborador, pk=pk)
     estava_ativo = colaborador.ativo
     form = ColaboradorForm(request.POST or None, instance=colaborador)
     if request.method == 'POST' and form.is_valid():
-        colaborador = form.save()
-        
-        mudou_status = False
-        if estava_ativo and not colaborador.ativo:
-            colaborador.data_inativacao = timezone.now()
-            mudou_status = True
-        elif not estava_ativo and colaborador.ativo:
-            colaborador.data_inativacao = None
-            colaborador.data_ativacao = timezone.now()
-            mudou_status = True
-            
-        if mudou_status:
-            colaborador.save(update_fields=['data_inativacao', 'data_ativacao'])
-            
+        vai_inativar = estava_ativo and not form.cleaned_data['ativo']
+        iniciativa = formulario = None
+        if vai_inativar:
+            iniciativa, formulario = _validar_formulario_desligamento(request)
+            if formulario is None:
+                return render(request, 'pesquisas/colaborador_form.html', {
+                    'form': form, 'colaborador': colaborador, **_formularios_desligamento_por_iniciativa(),
+                })
+
+        with transaction.atomic():
+            colaborador = form.save()
+
+            mudou_status = False
+            if vai_inativar:
+                colaborador.data_inativacao = timezone.now()
+                mudou_status = True
+            elif not estava_ativo and colaborador.ativo:
+                colaborador.data_inativacao = None
+                colaborador.data_ativacao = timezone.now()
+                mudou_status = True
+
+            if mudou_status:
+                colaborador.save(update_fields=['data_inativacao', 'data_ativacao'])
+
+            if vai_inativar:
+                registrar_desligamento_pendente(colaborador, iniciativa, formulario, request.user)
+            elif not estava_ativo and colaborador.ativo:
+                cancelar_desligamentos_abertos(colaborador)
+
         messages.success(request, 'Colaborador atualizado com sucesso.')
         return redirect('pesquisas:colaborador_lista')
     return render(request, 'pesquisas/colaborador_form.html', {
-        'form': form,
-        'colaborador': colaborador,
+        'form': form, 'colaborador': colaborador, **_formularios_desligamento_por_iniciativa(),
     })
 
 
 @staff_required
 @require_POST
 def colaborador_alterar_status(request, pk):
+    from desligamentos.services import cancelar_desligamentos_abertos, registrar_desligamento_pendente
+
     colaborador = get_object_or_404(Colaborador, pk=pk)
-    colaborador.ativo = not colaborador.ativo
-    
     agora = timezone.now()
-    if not colaborador.ativo:
-        colaborador.data_inativacao = agora
+
+    if colaborador.ativo:
+        iniciativa, formulario = _validar_formulario_desligamento(request)
+        if formulario is None:
+            return redirect('pesquisas:colaborador_lista')
+        with transaction.atomic():
+            colaborador.ativo = False
+            colaborador.data_inativacao = agora
+            colaborador.save()
+            registrar_desligamento_pendente(colaborador, iniciativa, formulario, request.user)
+        messages.success(
+            request,
+            f'{colaborador.nome} agora está inativo. Um card foi criado na coluna "Pendentes" do Kanban de desligamentos.',
+        )
     else:
+        colaborador.ativo = True
         colaborador.data_inativacao = None
         colaborador.data_ativacao = agora
-        
-    colaborador.save()
-    status = 'ativo' if colaborador.ativo else 'inativo'
-    messages.success(request, f'{colaborador.nome} agora está {status}.')
+        colaborador.save()
+        cancelar_desligamentos_abertos(colaborador)
+        messages.success(request, f'{colaborador.nome} agora está ativo.')
+
     return redirect('pesquisas:colaborador_lista')
 
 @staff_required

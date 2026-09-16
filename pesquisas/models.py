@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
+from django.urls import reverse
 from django.utils import timezone
 
 
@@ -140,6 +141,12 @@ class Pesquisa(models.Model):
     data_final = models.DateTimeField()
     link_uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='pesquisas_criadas')
+
+    @property
+    def link_completo(self):
+        caminho = reverse('pesquisas:responder', kwargs={'link_uuid': self.link_uuid})
+        base_url = settings.CSRF_TRUSTED_ORIGINS[0] if settings.CSRF_TRUSTED_ORIGINS else 'http://localhost:5012'
+        return f"{base_url}{caminho}"
 
     class Meta:
         ordering = ('-data_inicio',)

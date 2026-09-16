@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'pesquisas',
+    'desligamentos',
 ]
 
 MIDDLEWARE = [
@@ -159,6 +160,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = 'DENY'
 if not DEBUG:
     SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=env_bool)

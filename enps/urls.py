@@ -27,6 +27,7 @@ urlpatterns = [
     path('accounts/password_change/', LocalPasswordChangeView.as_view(), name='password_change'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('', include('pesquisas.urls')),
+    path('', include('desligamentos.urls')),
 ]
 
 # Permite que o Django sirva arquivos estáticos corretamente durante o desenvolvimento (DEBUG=True)

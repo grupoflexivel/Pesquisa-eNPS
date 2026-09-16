@@ -67,13 +67,17 @@
                             <a class="btn btn-sm btn-outline-primary" href="{% url 'pesquisas:colaborador_editar' colaborador.pk %}" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <!-- Botão de Inativar / Ativar -->
-                            <form method="post" action="{% url 'pesquisas:colaborador_status' colaborador.pk %}">
-                                {% csrf_token %}
-                                <button class="btn btn-sm btn-outline-secondary">
-                                    {% if colaborador.ativo %}Inativar{% else %}Ativar{% endif %}
+                            {% if colaborador.ativo %}
+                                <!-- Botão acionador manual via JS -->
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-inativar" data-modal-id="motivoModal{{ colaborador.pk }}">
+                                    Inativar
                                 </button>
-                            </form>
+                            {% else %}
+                                <form method="post" action="{% url 'pesquisas:colaborador_status' colaborador.pk %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-secondary">Ativar</button>
+                                </form>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -86,4 +90,78 @@
         </table>
     </div>
 </div>
+
+<!-- Modais estruturados fora da tabela -->
+{% for colaborador in colaboradores %}
+    {% if colaborador.ativo %}
+    <div class="modal fade" id="motivoModal{{ colaborador.pk }}" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="post" action="{% url 'pesquisas:colaborador_status' colaborador.pk %}" class="modal-content shadow">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Inativar {{ colaborador.nome }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <p class="text-secondary small">Informe o motivo do desligamento. Um card será criado automaticamente na coluna "Pendentes" do Kanban com o link a ser enviado.</p>
+                    <div class="mb-3">
+                        <label class="form-label d-block">Motivo do desligamento</label>
+                        <div class="form-check">
+                            <input class="form-check-input iniciativa-radio" type="radio" name="iniciativa" value="EMPRESA" id="iniciativaEmpresa{{ colaborador.pk }}" required>
+                            <label class="form-check-label" for="iniciativaEmpresa{{ colaborador.pk }}">Iniciativa da empresa</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input iniciativa-radio" type="radio" name="iniciativa" value="COLABORADOR" id="iniciativaColaborador{{ colaborador.pk }}" required>
+                            <label class="form-check-label" for="iniciativaColaborador{{ colaborador.pk }}">Iniciativa do colaborador</label>
+                        </div>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label" for="formularioSelect{{ colaborador.pk }}">Formulário / link a ser enviado</label>
+                        <select class="form-select formulario-select" name="formulario_id" id="formularioSelect{{ colaborador.pk }}" required disabled>
+                            <option value="">Selecione o motivo acima</option>
+                        </select>
+                        <div class="form-text">A lista é filtrada conforme o motivo selecionado.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar inativação</button>
+                </div>
+                <template class="opcoes-empresa">{% for f in formularios_empresa %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}</template>
+                <template class="opcoes-colaborador">{% for f in formularios_colaborador %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}</template>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Controle manual de abertura do modal via JavaScript
+        document.querySelectorAll('.btn-inativar').forEach(button => {
+            button.addEventListener('click', function () {
+                const modalId = this.getAttribute('data-modal-id');
+                const modalEl = document.getElementById(modalId);
+                if (modalEl) {
+                    const modalInstance = new bootstrap.Modal(modalEl);
+                    modalInstance.show();
+                }
+            });
+        });
+
+        // Controle dos rádios para carregar o select correto
+        document.querySelectorAll('.iniciativa-radio').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const form = radio.closest('form');
+                const select = form.querySelector('.formulario-select');
+                const template = form.querySelector(radio.value === 'EMPRESA' ? '.opcoes-empresa' : '.opcoes-colaborador');
+                select.innerHTML = '<option value="">Selecione um formulário</option>' + template.innerHTML;
+                select.disabled = false;
+            });
+        });
+    });
+</script>
 {% endblock %}

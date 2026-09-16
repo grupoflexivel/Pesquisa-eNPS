@@ -1,6 +1,6 @@
 {% load static %}
 <aside class="sidebar p-3 d-flex flex-column" id="sidebar" style="background-color: #004b46; height: 100vh; position: sticky; top: 0;">
-    <div class="d-flex align-items-center justify-content-between mb-4 flex-shrink-0">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-shrink-0">
         <a class="text-decoration-none d-flex align-items-center overflow-hidden" href="{% url 'pesquisas:dashboard' %}">
             <img src="{% static 'pesquisas/img/logo-grupo-flexivel.png' %}" alt="Logo" class="sidebar-logo-full" style="height: 32px; object-fit: contain;">
         </a>
@@ -10,6 +10,8 @@
     </div>
     
     <nav class="nav nav-pills flex-column gap-1 overflow-y-auto flex-grow-1 pe-1">
+        <div class="small text-white-50 px-2 pt-1 pb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Módulo eNPS</div>
+        
         <a class="nav-link text-white {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'pesquisas:dashboard' %}">
             <i class="bi bi-grid"></i><span class="label">Dashboard / Relatórios</span>
         </a>
@@ -22,8 +24,17 @@
         <a class="nav-link text-white {% if request.resolver_match.url_name == 'colaborador_lista' or request.resolver_match.url_name == 'colaborador_criar' %}active{% endif %}" href="{% url 'pesquisas:colaborador_lista' %}">
             <i class="bi bi-people"></i><span class="label">Gerenciar colaboradores</span>
         </a>
+        <div class="small text-white-50 px-2 pt-3 pb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Módulo Desligamentos</div>
+
+        <a class="nav-link text-white {% if request.resolver_match.url_name == 'kanban' %}active{% endif %}" href="{% url 'desligamentos:kanban' %}">
+            <i class="bi bi-kanban"></i><span class="label">Kanban de desligamentos</span>
+        </a>
+        <a class="nav-link text-white {% if request.resolver_match.url_name == 'formulario_lista' or request.resolver_match.url_name == 'formulario_criar' %}active{% endif %}" href="{% url 'desligamentos:formulario_lista' %}">
+            <i class="bi bi-file-earmark-text"></i><span class="label">Formulários de desligamento</span>
+        </a>
+
         {% if user.is_superuser %}
-            <a class="nav-link text-white" href="{% url 'admin:index' %}">
+            <a class="nav-link text-white mt-2" href="{% url 'admin:index' %}">
                 <i class="bi bi-gear"></i><span class="label">Admin Django</span>
             </a>
         {% endif %}

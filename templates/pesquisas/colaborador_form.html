@@ -36,6 +36,49 @@
     </form>
 </div>
 
+<!-- Modal: motivo do desligamento, exigido ao desmarcar "Ativo" -->
+{% if colaborador and colaborador.ativo %}
+<div class="modal fade" id="motivoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <!-- Adicionamos fundo branco forçado e z-index alto -->
+        <div class="modal-content bg-white shadow-lg" style="background-color: #ffffff !important; position: relative; z-index: 1055;">
+            <div class="modal-header">
+                <h5 class="modal-title">Inativar {{ colaborador.nome }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body text-start">
+                <p class="text-secondary small">Informe o motivo do desligamento. Um card será criado automaticamente na coluna "Pendentes" do Kanban com o link a ser enviado.</p>
+                <div class="mb-3">
+                    <label class="form-label d-block">Motivo do desligamento</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="modal_iniciativa" value="EMPRESA" id="modalIniciativaEmpresa">
+                        <label class="form-check-label" for="modalIniciativaEmpresa">Iniciativa da empresa</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="modal_iniciativa" value="COLABORADOR" id="modalIniciativaColaborador">
+                        <label class="form-check-label" for="modalIniciativaColaborador">Iniciativa do colaborador</label>
+                    </div>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label" for="modalFormularioSelect">Formulário / link a ser enviado</label>
+                    <select class="form-select" id="modalFormularioSelect" disabled>
+                        <option value="">Selecione o motivo acima</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="modalCancelar">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="modalConfirmar">Confirmar inativação</button>
+            </div>
+            <template id="modalOpcoesEmpresa">{% for f in formularios_empresa %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}</template>
+            <template id="modalOpcoesColaborador">{% for f in formularios_colaborador %}<option value="{{ f.pk }}">{{ f.nome }}</option>{% endfor %}</template>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const checkboxSuper = document.getElementById('id_is_superuser');
@@ -57,6 +100,51 @@
 
             // Executa ao alterar o checkbox
             checkboxSuper.addEventListener('change', toggleUsername);
+        }
+
+        const form = document.querySelector('form[method="post"]');
+        const checkboxAtivo = document.getElementById('id_ativo');
+        const motivoModalEl = document.getElementById('motivoModal');
+        
+        if (form && checkboxAtivo && motivoModalEl) {
+            const motivoModal = new bootstrap.Modal(motivoModalEl);
+            const select = document.getElementById('modalFormularioSelect');
+            let confirmado = false;
+
+            motivoModalEl.querySelectorAll('input[name="modal_iniciativa"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const template = document.getElementById(radio.value === 'EMPRESA' ? 'modalOpcoesEmpresa' : 'modalOpcoesColaborador');
+                    select.innerHTML = '<option value="">Selecione um formulário</option>' + template.innerHTML;
+                    select.disabled = false;
+                });
+            });
+
+            form.addEventListener('submit', function (event) {
+                if (!confirmado && !checkboxAtivo.checked) {
+                    event.preventDefault();
+                    motivoModal.show();
+                }
+            });
+
+            document.getElementById('modalCancelar').addEventListener('click', () => {
+                checkboxAtivo.checked = true;
+            });
+
+            document.getElementById('modalConfirmar').addEventListener('click', () => {
+                const iniciativa = motivoModalEl.querySelector('input[name="modal_iniciativa"]:checked');
+                if (!iniciativa || !select.value) {
+                    alert('Selecione o motivo e o formulário de desligamento.');
+                    return;
+                }
+                form.querySelectorAll('input[name="iniciativa"], input[name="formulario_id"]').forEach(el => el.remove());
+                form.insertAdjacentHTML('beforeend',
+                    `<input type="hidden" name="iniciativa" value="${iniciativa.value}">` +
+                    `<input type="hidden" name="formulario_id" value="${select.value}">`
+                );
+                confirmado = true;
+                motivoModal.hide();
+                form.submit();
+            });
         }
     });
 </script>

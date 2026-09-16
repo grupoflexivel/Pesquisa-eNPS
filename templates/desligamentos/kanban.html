@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Kanban de desligamentos · eNPS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kanban-board { display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 1rem; align-items: start; }
+    @media (max-width: 991.98px) { .kanban-board { grid-template-columns: 1fr; } }
+    .kanban-col { background: #eef0f5; border-radius: 1rem; padding: .9rem; min-height: 200px; }
+    .kanban-col h2 { font-size: .95rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: #4a4d63; }
+    .kanban-card { background: white; border-radius: .8rem; padding: .9rem; margin-bottom: .75rem; box-shadow: 0 .15rem .5rem rgba(25,24,52,.07); }
+    .kanban-card:last-child { margin-bottom: 0; }
+    .kanban-empty { color: #9497ac; font-size: .85rem; text-align: center; padding: 1.5rem 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Kanban de desligamentos</h1>
+        <p class="text-secondary mb-0">Acompanhe o envio e a resposta dos formulários de desligamento.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'desligamentos:formulario_lista' %}">
+        <i class="bi bi-file-earmark-text"></i> Formulários
+    </a>
+</div>
+
+<form id="csrfForm" style="display: none;">{% csrf_token %}</form>
+
+<div class="kanban-board">
+    <div class="kanban-col">
+        <h2 class="mb-3">Pendentes <span class="badge text-bg-secondary">{{ pendentes|length }}</span></h2>
+        {% for d in pendentes %}
+            <div class="kanban-card">
+                <div class="fw-semibold">{{ d.colaborador.nome }}</div>
+                <div class="small text-secondary mb-2">{{ d.colaborador.empresa.nome }}</div>
+                <span class="badge {% if d.iniciativa == 'EMPRESA' %}text-bg-info{% else %}text-bg-warning{% endif %} mb-2">
+                    {{ d.get_iniciativa_display }}
+                </span>
+                <div class="small text-secondary mb-2">Formulário: {{ d.formulario.nome }}</div>
+                <div class="input-group input-group-sm mb-2">
+                    <input class="form-control" readonly value="{{ d.formulario.link_completo }}" id="link-pendente-{{ d.pk }}">
+                    <button class="btn btn-outline-secondary copy-e-enviar" data-target="link-pendente-{{ d.pk }}" data-enviar-url="{% url 'desligamentos:desligamento_marcar_enviado' d.pk %}" title="Copiar e marcar como enviado">
+                        <i class="bi bi-copy"></i>
+                    </button>
+                </div>
+                <div class="small text-secondary">Criado em {{ d.data_criacao|date:'d/m/Y H:i' }}</div>
+            </div>
+        {% empty %}
+            <div class="kanban-empty">Nenhum desligamento pendente.</div>
+        {% endfor %}
+    </div>
+
+    <div class="kanban-col">
+        <h2 class="mb-3">Aguardando resposta <span class="badge text-bg-secondary">{{ aguardando|length }}</span></h2>
+        {% for d in aguardando %}
+            <div class="kanban-card">
+                <div class="fw-semibold">{{ d.colaborador.nome }}</div>
+                <div class="small text-secondary mb-2">{{ d.colaborador.empresa.nome }}</div>
+                <span class="badge {% if d.iniciativa == 'EMPRESA' %}text-bg-info{% else %}text-bg-warning{% endif %} mb-2">
+                    {{ d.get_iniciativa_display }}
+                </span>
+                <div class="small text-secondary mb-2">Formulário: {{ d.formulario.nome }}</div>
+                <div class="input-group input-group-sm mb-2">
+                    <input class="form-control" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'desligamentos:responder' d.formulario.link_uuid %}" id="link-aguardando-{{ d.pk }}">
+                    <button class="btn btn-outline-secondary copy-link" data-target="link-aguardando-{{ d.pk }}" title="Copiar link novamente">
+                        <i class="bi bi-copy"></i>
+                    </button>
+                </div>
+                <div class="small text-secondary">Enviado em {{ d.data_envio|date:'d/m/Y H:i' }}</div>
+            </div>
+        {% empty %}
+            <div class="kanban-empty">Nenhum link aguardando resposta.</div>
+        {% endfor %}
+    </div>
+
+    <div class="kanban-col">
+        <h2 class="mb-3">Respondidos <span class="badge text-bg-secondary">{{ respondidos|length }}</span></h2>
+        {% for d in respondidos %}
+            <div class="kanban-card">
+                <div class="fw-semibold">{{ d.colaborador.nome }}</div>
+                <div class="small text-secondary mb-2">{{ d.colaborador.empresa.nome }}</div>
+                <span class="badge {% if d.iniciativa == 'EMPRESA' %}text-bg-info{% else %}text-bg-warning{% endif %} mb-2">
+                    {{ d.get_iniciativa_display }}
+                </span>
+                <div class="small text-secondary mb-2">Respondido em {{ d.data_resposta|date:'d/m/Y H:i' }}</div>
+                <a class="btn btn-sm btn-primary w-100" href="{% url 'desligamentos:desligamento_respostas' d.pk %}">
+                    <i class="bi bi-eye"></i> Ver respostas
+                </a>
+            </div>
+        {% empty %}
+            <div class="kanban-empty">Nenhuma resposta recebida ainda.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.copy-link').forEach(button => button.addEventListener('click', async event => {
+        event.preventDefault();
+        const input = document.getElementById(button.dataset.target);
+        await navigator.clipboard.writeText(input.value);
+        button.innerHTML = '<i class="bi bi-check2"></i>';
+        setTimeout(() => button.innerHTML = '<i class="bi bi-copy"></i>', 1200);
+    }));
+
+    const csrfToken = document.querySelector('#csrfForm [name=csrfmiddlewaretoken]').value;
+
+    document.querySelectorAll('.copy-e-enviar').forEach(button => button.addEventListener('click', async event => {
+        event.preventDefault();
+        const input = document.getElementById(button.dataset.target);
+        await navigator.clipboard.writeText(input.value);
+        button.disabled = true;
+        button.innerHTML = '<i class="bi bi-check2"></i>';
+        await fetch(button.dataset.enviarUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+        });
+        window.location.reload();
+    }));
+</script>
+{% endblock %}

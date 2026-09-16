@@ -147,7 +147,7 @@ LOGGING = {
 }
 
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'pesquisas:home' 
+LOGIN_REDIRECT_URL = 'pesquisas:dashboard' 
 LOGOUT_REDIRECT_URL = 'login'
 
 SESSION_COOKIE_HTTPONLY = True

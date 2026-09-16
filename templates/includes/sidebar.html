@@ -1,5 +1,5 @@
 {% load static %}
-<aside class="sidebar p-3 d-flex flex-column" id="sidebar" style="background-color: #004b46; height: 100vh; position: sticky; top: 0;">
+<aside class="sidebar p-3 d-flex flex-column" id="sidebar" style="background-color: #004b46; height: 100vh; position: sticky; top: 0; overflow-x: hidden;">
     <div class="d-flex align-items-center justify-content-between mb-3 flex-shrink-0">
         <a class="text-decoration-none d-flex align-items-center overflow-hidden" href="{% url 'pesquisas:dashboard' %}">
             <img src="{% static 'pesquisas/img/logo-grupo-flexivel.png' %}" alt="Logo" class="sidebar-logo-full" style="height: 32px; object-fit: contain;">
@@ -9,58 +9,88 @@
         </button>
     </div>
     
-    <nav class="nav nav-pills flex-column gap-1 overflow-y-auto flex-grow-1 pe-1">
-        <div class="small text-white-50 px-2 pt-1 pb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Módulo eNPS</div>
+    <nav class="nav nav-pills flex-column gap-1 overflow-y-auto overflow-x-hidden flex-grow-1 pe-1">
+        <!-- Módulo Geral -->
+        <div class="small text-white-50 px-2 pt-1 pb-1 text-uppercase fw-bold text-nowrap" style="font-size: 0.7rem;">Módulo Geral</div>
         
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'pesquisas:dashboard' %}">
-            <i class="bi bi-grid"></i><span class="label">Dashboard / Relatórios</span>
+        <a class="nav-link text-white text-nowrap {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'pesquisas:dashboard' %}">
+            <i class="bi bi-grid me-2"></i><span class="label">Dashboard / Relatórios</span>
         </a>
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'pesquisa_lista' %}active{% endif %}" href="{% url 'pesquisas:pesquisa_lista' %}">
-            <i class="bi bi-ui-checks"></i><span class="label">Gerenciar pesquisas</span>
-        </a>
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'pesquisa_criar' %}active{% endif %}" href="{% url 'pesquisas:pesquisa_criar' %}">
-            <i class="bi bi-plus-circle"></i><span class="label">Criar nova pesquisa</span>
-        </a>
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'colaborador_lista' or request.resolver_match.url_name == 'colaborador_criar' %}active{% endif %}" href="{% url 'pesquisas:colaborador_lista' %}">
-            <i class="bi bi-people"></i><span class="label">Gerenciar colaboradores</span>
-        </a>
-        <div class="small text-white-50 px-2 pt-3 pb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Módulo Desligamentos</div>
-
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'kanban' %}active{% endif %}" href="{% url 'desligamentos:kanban' %}">
-            <i class="bi bi-kanban"></i><span class="label">Kanban de desligamentos</span>
-        </a>
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'formulario_lista' or request.resolver_match.url_name == 'formulario_criar' %}active{% endif %}" href="{% url 'desligamentos:formulario_lista' %}">
-            <i class="bi bi-file-earmark-text"></i><span class="label">Formulários de desligamento</span>
+        <a class="nav-link text-white text-nowrap {% if request.resolver_match.url_name == 'colaborador_lista' or request.resolver_match.url_name == 'colaborador_criar' %}active{% endif %}" href="{% url 'pesquisas:colaborador_lista' %}">
+            <i class="bi bi-people me-2"></i><span class="label">Gerenciar colaboradores</span>
         </a>
 
-        {% if user.is_superuser %}
-            <a class="nav-link text-white mt-2" href="{% url 'admin:index' %}">
-                <i class="bi bi-gear"></i><span class="label">Admin Django</span>
-            </a>
-        {% endif %}
+        <!-- Módulo eNPS -->
+        <div class="small text-white-50 px-2 pt-3 pb-1 text-uppercase fw-bold text-nowrap" style="font-size: 0.7rem;">Módulo eNPS</div>
+        
+        <a class="nav-link text-white text-nowrap {% if request.resolver_match.url_name == 'pesquisa_lista' %}active{% endif %}" href="{% url 'pesquisas:pesquisa_lista' %}">
+            <i class="bi bi-ui-checks me-2"></i><span class="label">Gerenciar pesquisas</span>
+        </a>
+        <a class="nav-link text-white text-nowrap {% if request.resolver_match.url_name == 'pesquisa_criar' %}active{% endif %}" href="{% url 'pesquisas:pesquisa_criar' %}">
+            <i class="bi bi-plus-circle me-2"></i><span class="label">Cadastrar nova pesquisa</span>
+        </a>
+
+        <!-- Módulo Desligamento -->
+        <div class="small text-white-50 px-2 pt-3 pb-1 text-uppercase fw-bold text-nowrap" style="font-size: 0.7rem;">Módulo Desligamento</div>
+
+        <a class="nav-link text-white text-nowrap {% if request.resolver_match.url_name == 'kanban' %}active{% endif %}" href="{% url 'desligamentos:kanban' %}">
+            <i class="bi bi-kanban me-2"></i><span class="label">Kanban de desligamentos</span>
+        </a>
+        <a class="nav-link text-white text-nowrap {% if request.resolver_match.url_name == 'formulario_lista' or request.resolver_match.url_name == 'formulario_criar' %}active{% endif %}" href="{% url 'desligamentos:formulario_lista' %}">
+            <i class="bi bi-file-earmark-text me-2"></i><span class="label">Formulários de desligamento</span>
+        </a>
     </nav>
 
-    <div class="mt-auto pt-4 border-top border-secondary flex-shrink-0">
-        <div class="user-info small text-white-50 mb-2">{{ user.get_full_name|default:user.username }}</div>
+    <!-- Módulo Administrativo e Rodapé -->
+    <div class="mt-auto pt-3 border-top border-secondary flex-shrink-0 overflow-hidden">
+        {% if user.is_superuser %}
+            <div class="small text-white-50 px-2 pb-1 text-uppercase fw-bold text-nowrap" style="font-size: 0.7rem;">Módulo Administrativo</div>
+            <a class="nav-link text-white text-nowrap mb-2" href="{% url 'admin:index' %}">
+                <i class="bi bi-gear me-2"></i><span class="label">Admin Django</span>
+            </a>
+        {% endif %}
+
+        <div class="user-info small text-white-50 mb-2 px-2 text-nowrap">{{ user.get_full_name|default:user.username }}</div>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button class="nav-link text-white border-0 bg-transparent w-100 text-start" type="submit">
-                <i class="bi bi-box-arrow-left"></i><span class="label">Sair</span>
+            <button class="nav-link text-white text-nowrap border-0 bg-transparent w-100 text-start" type="submit">
+                <i class="bi bi-box-arrow-left me-2"></i><span class="label">Sair</span>
             </button>
         </form>
     </div>
 </aside>
 
 <style>
+    /* Largura padrão expandida de 300px */
+    .sidebar {
+        width: 325px;
+        transition: width 0.3s ease;
+    }
+
+    /* Quando recolhida pelo JS */
+    .sidebar.collapsed {
+        width: 75px !important;
+    }
+
     .sidebar.collapsed .sidebar-logo-full {
         display: none !important;
     }
+
+    .sidebar.collapsed .label,
+    .sidebar.collapsed .user-info,
+    .sidebar.collapsed .text-uppercase {
+        display: none !important;
+    }
     
+    /* Barra de rolagem vertical */
     .sidebar nav::-webkit-scrollbar {
         width: 4px;
     }
     .sidebar nav::-webkit-scrollbar-thumb {
         background-color: rgba(255, 255, 255, 0.2);
         border-radius: 4px;
+    }
+    .sidebar nav {
+        overflow-x: hidden;
     }
 </style>

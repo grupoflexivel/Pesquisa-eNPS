@@ -8,6 +8,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 
+from desligamentos.models import FormularioDesligamento, RespostaDesligamento
+
 from .forms import ColaboradorForm, PerguntaFormSet, PesquisaForm, ResponderPerguntaForm, ValidarCPFForm
 from .models import Colaborador, DetalheResposta, Empresa, Pergunta, Pesquisa, RespostaPesquisa
 from .services import gerar_hash_documento
@@ -54,9 +56,13 @@ def _status_pesquisa(pesquisa):
 def dashboard(request):
     contexto = {
         'total_colaboradores': Colaborador.objects.filter(ativo=True).count(),
+        'total_colaboradores_inativos': Colaborador.objects.filter(ativo=False).count(),
         'total_pesquisas': Pesquisa.objects.count(),
         'total_respostas': RespostaPesquisa.objects.count(),
+        'total_formularios_desligamento': FormularioDesligamento.objects.count(),
+        'total_respostas_desligamento': RespostaDesligamento.objects.count(),
         'pesquisas': Pesquisa.objects.annotate(total_respostas=Count('respostas'))[:8],
+        'desligamentos_recentes': FormularioDesligamento.objects.all()[:5],
     }
     return render(request, 'pesquisas/dashboard.html', contexto)
 

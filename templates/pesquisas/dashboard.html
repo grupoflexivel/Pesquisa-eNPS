@@ -5,35 +5,55 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-1">Dashboard</h1>
-        <p class="text-secondary mb-0">Visão geral das pesquisas internas.</p>
+        <p class="text-secondary mb-0">Visão geral das pesquisas internas e desligamentos.</p>
     </div>
     <a class="btn btn-primary" href="{% url 'pesquisas:pesquisa_criar' %}">
         <i class="bi bi-plus-lg"></i> Nova pesquisa
     </a>
 </div>
 
+<!-- 6 KPIs no Topo -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card p-4">
-            <span class="text-secondary">Colaboradores ativos</span>
-            <span class="metric">{{ total_colaboradores }}</span>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card p-3 h-100">
+            <span class="text-secondary small">Colaboradores ativos</span>
+            <span class="metric fs-4 fw-bold">{{ total_colaboradores }}</span>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card p-4">
-            <span class="text-secondary">Pesquisas</span>
-            <span class="metric">{{ total_pesquisas }}</span>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card p-3 h-100">
+            <span class="text-secondary small">Colaboradores inativos</span>
+            <span class="metric fs-4 fw-bold">{{ total_colaboradores_inativos }}</span>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card p-4">
-            <span class="text-secondary">Respostas recebidas</span>
-            <span class="metric">{{ total_respostas }}</span>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card p-3 h-100">
+            <span class="text-secondary small">Pesquisas</span>
+            <span class="metric fs-4 fw-bold">{{ total_pesquisas }}</span>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card p-3 h-100">
+            <span class="text-secondary small">Respostas (Pesquisas)</span>
+            <span class="metric fs-4 fw-bold">{{ total_respostas }}</span>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card p-3 h-100">
+            <span class="text-secondary small">Formulários Deslig.</span>
+            <span class="metric fs-4 fw-bold">{{ total_formularios_desligamento }}</span>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card p-3 h-100">
+            <span class="text-secondary small">Respostas (Deslig.)</span>
+            <span class="metric fs-4 fw-bold">{{ total_respostas_desligamento }}</span>
         </div>
     </div>
 </div>
 
-<div class="card p-4">
+<!-- Card de Pesquisas Recentes -->
+<div class="card p-4 mb-4">
     <h2 class="h5 mb-3">Pesquisas recentes</h2>
     <div class="table-responsive">
         <table class="table align-middle">
@@ -58,6 +78,44 @@
                 {% empty %}
                 <tr>
                     <td colspan="4" class="text-center text-secondary py-4">Nenhuma pesquisa cadastrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Card Abaixo: Desligamentos Recentes -->
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">Desligamentos recentes</h2>
+        <!-- Botão alinhado à direita dentro do cabeçalho do card -->
+        <a class="btn btn-sm btn-primary" href="{% url 'desligamentos:formulario_criar' %}">
+            <i class="bi bi-plus-lg"></i> Novo Formulário
+        </a>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Título / Formulário</th>
+                    <th>Iniciativa</th>
+                    <th>Criado em</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in desligamentos_recentes %}
+                <tr>
+                    <td class="fw-semibold">{{ d.nome }}</td>
+                    <td>
+                        <span class="badge bg-light text-dark border">{{ d.get_iniciativa_display }}</span>
+                    </td>
+                    <td>{{ d.data_criacao|date:'d/m/Y H:i' }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center text-secondary py-4">Nenhum registro de desligamento encontrado.</td>
                 </tr>
                 {% endfor %}
             </tbody>
